@@ -91,12 +91,15 @@ void main() {
     variant: kPlatformVariant,
   );
 
-  testWidgets('Bottom navigation', variant: kPlatformVariant, (tester) async {
+  testWidgets('Side navigation menu', variant: kPlatformVariant, (tester) async {
     final app = await makeTestProviderScope(tester, child: const Application());
 
     await tester.pumpWidget(app);
 
     expect(find.byType(MainTabScaffold), findsOneWidget);
+
+    await tester.tap(find.byType(MainMenuButton));
+    await tester.pumpAndSettle();
 
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Puzzles'), findsOneWidget);

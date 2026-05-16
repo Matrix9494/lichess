@@ -117,6 +117,7 @@ class _MaterialTabBodyState extends ConsumerState<_MaterialTabBody> {
       },
       child: PlatformScaffold(
         appBar: PlatformAppBar(
+          leading: const MainMenuButton(),
           title: Text(context.l10n.puzzles),
           centerTitle: false,
           titleTextStyle: Theme.of(context).platform == TargetPlatform.iOS

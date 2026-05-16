@@ -90,6 +90,7 @@ class _WatchScreenState extends ConsumerState<WatchTabScreen> {
       },
       child: PlatformScaffold(
         appBar: PlatformAppBar(
+          leading: const MainMenuButton(),
           title: Text(context.l10n.watch),
           centerTitle: false,
           titleTextStyle: Theme.of(context).platform == TargetPlatform.iOS

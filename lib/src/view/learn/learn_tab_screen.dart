@@ -65,6 +65,7 @@ class LearnTabScreen extends ConsumerWidget {
       },
       child: PlatformScaffold(
         appBar: PlatformAppBar(
+          leading: const MainMenuButton(),
           title: Text(context.l10n.learnMenu),
           centerTitle: false,
           titleTextStyle: Theme.of(context).platform == TargetPlatform.iOS
