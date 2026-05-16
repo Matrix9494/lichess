@@ -24,6 +24,8 @@ import 'package:lichess_mobile/src/model/engine/evaluation_mixin.dart';
 import 'package:lichess_mobile/src/model/engine/evaluation_preferences.dart';
 import 'package:lichess_mobile/src/model/game/game_socket_events.dart';
 import 'package:lichess_mobile/src/model/game/player.dart';
+import 'package:lichess_mobile/src/model/practice/practice.dart';
+import 'package:lichess_mobile/src/model/practice/practice_repository.dart';
 import 'package:lichess_mobile/src/model/study/study.dart';
 import 'package:lichess_mobile/src/model/study/study_repository.dart';
 import 'package:lichess_mobile/src/network/socket.dart';
@@ -33,7 +35,24 @@ import 'package:lichess_mobile/src/widgets/pgn.dart';
 
 part 'study_controller.freezed.dart';
 
-typedef StudyOptions = ({StudyId id, StudyChapterId? initialChapter});
+@immutable
+class StudyOptions {
+  const StudyOptions({required this.id, this.initialChapter, this.practice = false});
+
+  final StudyId id;
+  final StudyChapterId? initialChapter;
+  final bool practice;
+
+  @override
+  bool operator ==(Object other) =>
+      other is StudyOptions &&
+      other.id == id &&
+      other.initialChapter == initialChapter &&
+      other.practice == practice;
+
+  @override
+  int get hashCode => Object.hash(id, initialChapter, practice);
+}
 
 final studyControllerProvider = AsyncNotifierProvider.autoDispose
     .family<StudyController, StudyState, StudyOptions>(
@@ -56,11 +75,11 @@ class StudyController extends AsyncNotifier<StudyState>
   StreamSubscription<SocketEvent>? _socketSubscription;
   final _likeDebouncer = Debouncer(const Duration(milliseconds: 500));
 
-  late SocketClient _socketClient;
+  SocketClient? _socketClient;
 
   @override
   @protected
-  SocketClient get socketClient => _socketClient;
+  SocketClient? get socketClient => _socketClient;
 
   @override
   @protected
@@ -75,12 +94,14 @@ class StudyController extends AsyncNotifier<StudyState>
     });
 
     final socketPool = ref.watch(socketPoolProvider);
-    _socketClient = socketPool.open(Uri(path: '/study/${options.id}/socket/v6'));
+    if (!options.practice) {
+      _socketClient = socketPool.open(Uri(path: '/study/${options.id}/socket/v6'));
+    }
 
     final chapter = await _fetchChapter(options.id, chapterId: options.initialChapter);
 
     _socketSubscription?.cancel();
-    _socketSubscription = _socketClient.stream.listen(_handleSocketEvent);
+    _socketSubscription = _socketClient?.stream.listen(_handleSocketEvent);
 
     return chapter;
   }
@@ -115,9 +136,29 @@ class StudyController extends AsyncNotifier<StudyState>
   }
 
   Future<StudyState> _fetchChapter(StudyId id, {StudyChapterId? chapterId}) async {
-    final (study, analysisSummary, pgn) = await ref
-        .read(studyRepositoryProvider)
-        .getStudy(id: id, chapterId: chapterId);
+    late final Study study;
+    late final AnalysisSummary? analysisSummary;
+    late final String pgn;
+    PracticeGoal? practiceGoal;
+
+    if (options.practice) {
+      final practiceChapterId = chapterId;
+      if (practiceChapterId == null) {
+        throw ArgumentError('Practice study loads require an initial chapter.');
+      }
+      final data = await ref
+          .read(practiceRepositoryProvider)
+          .getPracticeChapter(studyId: id, chapterId: practiceChapterId);
+      study = data.$1;
+      analysisSummary = data.$2;
+      pgn = data.$3;
+      practiceGoal = data.$4;
+    } else {
+      final data = await ref.read(studyRepositoryProvider).getStudy(id: id, chapterId: chapterId);
+      study = data.$1;
+      analysisSummary = data.$2;
+      pgn = data.$3;
+    }
 
     final game = PgnGame.parsePgn(pgn);
 
@@ -154,6 +195,9 @@ class StudyController extends AsyncNotifier<StudyState>
         pov: orientation,
         isComputerAnalysisAllowed: false,
         gamebookActive: false,
+        practiceGoal: practiceGoal,
+        practiceCompleted: false,
+        practiceCompletionSaved: false,
         pgn: pgn,
       );
       state = AsyncData(illegalPositionState);
@@ -193,8 +237,12 @@ class StudyController extends AsyncNotifier<StudyState>
       pgnHeaders: pgnHeaders,
       lastMove: lastMove,
       pov: orientation,
-      isComputerAnalysisAllowed: study.chapter.features.computer && !study.chapter.gamebook,
+      isComputerAnalysisAllowed:
+          (study.chapter.features.computer || options.practice) && !study.chapter.gamebook,
       gamebookActive: study.chapter.gamebook,
+      practiceGoal: practiceGoal,
+      practiceCompleted: false,
+      practiceCompletionSaved: false,
       pgn: pgn,
       analysisSummary: analysisSummary,
       acplChartData: analysisSummary != null ? makeAcplChartData() : null,
@@ -205,7 +253,7 @@ class StudyController extends AsyncNotifier<StudyState>
     state = AsyncData(studyState);
 
     if (state.requireValue.isEngineAvailable(evaluationPrefs)) {
-      socketClient.firstConnection.then((_) {
+      socketClient?.firstConnection.then((_) {
         requestEval();
       });
     }
@@ -217,7 +265,7 @@ class StudyController extends AsyncNotifier<StudyState>
     _likeDebouncer(() {
       if (!state.hasValue) return;
       final liked = state.requireValue.study.liked;
-      _socketClient.send('like', {'liked': !liked});
+      _socketClient?.send('like', {'liked': !liked});
       state = AsyncValue.data(
         state.requireValue.copyWith(study: state.requireValue.study.copyWith(liked: !liked)),
       );
@@ -287,6 +335,44 @@ class StudyController extends AsyncNotifier<StudyState>
         });
       }
     }
+
+    unawaited(_maybeCompletePractice());
+  }
+
+  Future<void> _maybeCompletePractice() async {
+    final value = state.value;
+    if (value == null ||
+        !value.isPractice ||
+        value.practiceCompleted ||
+        !value.isOnMainline ||
+        !value.isAtEndOfChapter) {
+      return;
+    }
+
+    final nbMoves = _practiceNbMoves(value);
+    state = AsyncValue.data(value.copyWith(practiceCompleted: true, practiceNbMoves: nbMoves));
+
+    if (ref.read(authControllerProvider) == null) return;
+
+    try {
+      await ref
+          .read(practiceRepositoryProvider)
+          .completeChapter(chapterId: value.currentChapter.id, nbMoves: nbMoves);
+    } catch (_) {
+      return;
+    }
+
+    final latest = state.value;
+    if (latest != null && latest.currentChapter.id == value.currentChapter.id) {
+      state = AsyncValue.data(latest.copyWith(practiceCompletionSaved: true));
+    }
+  }
+
+  int _practiceNbMoves(StudyState value) {
+    final currentPosition = value.currentPosition;
+    if (currentPosition == null) return 0;
+    final plies = (currentPosition.ply - _root.position.ply).clamp(0, 999);
+    return (plies / 2).ceil();
   }
 
   void onPromotionSelection(Role? role) {
@@ -441,7 +527,7 @@ class StudyController extends AsyncNotifier<StudyState>
     if (!state.hasValue) return;
     if (state.requireValue.isWriteable == false) return;
 
-    _socketClient.send(socketEvent, {...data, 'ch': state.requireValue.study.chapter.id.value});
+    _socketClient?.send(socketEvent, {...data, 'ch': state.requireValue.study.chapter.id.value});
   }
 
   void _setPath(
@@ -596,6 +682,14 @@ sealed class StudyState
     /// Whether we're currently in gamebook mode, where the user has to find the right moves.
     required bool gamebookActive,
 
+    PracticeGoal? practiceGoal,
+
+    @Default(false) bool practiceCompleted,
+
+    @Default(false) bool practiceCompletionSaved,
+
+    int? practiceNbMoves,
+
     /// The PGN headers of the study chapter.
     required IMap<String, String> pgnHeaders,
 
@@ -628,6 +722,8 @@ sealed class StudyState
 
   /// Whether the study is writeable by the current user
   bool get isWriteable => canIContribute && !gamebookActive;
+
+  bool get isPractice => practiceGoal != null;
 
   @override
   bool get alwaysRequestCloudEval => false;

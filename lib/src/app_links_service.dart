@@ -17,6 +17,7 @@ import 'package:lichess_mobile/src/model/puzzle/puzzle.dart';
 import 'package:lichess_mobile/src/model/puzzle/puzzle_angle.dart';
 import 'package:lichess_mobile/src/model/puzzle/puzzle_providers.dart';
 import 'package:lichess_mobile/src/model/puzzle/puzzle_theme.dart';
+import 'package:lichess_mobile/src/model/study/study_controller.dart';
 import 'package:lichess_mobile/src/model/tv/tv_channel.dart';
 import 'package:lichess_mobile/src/model/user/user.dart';
 import 'package:lichess_mobile/src/model/user/user_repository.dart';
@@ -127,10 +128,12 @@ class AppLinksService {
         final id = appLinkUri.pathSegments[1];
         final chapter = appLinkUri.pathSegments.getOrNull(2);
         return [
-          StudyScreen.buildRoute((
-            id: StudyId(id),
-            initialChapter: chapter != null ? StudyChapterId(chapter) : null,
-          )),
+          StudyScreen.buildRoute(
+            StudyOptions(
+              id: StudyId(id),
+              initialChapter: chapter != null ? StudyChapterId(chapter) : null,
+            ),
+          ),
         ];
       case 'broadcast':
         final roundId = BroadcastRoundId(appLinkUri.pathSegments[3]);

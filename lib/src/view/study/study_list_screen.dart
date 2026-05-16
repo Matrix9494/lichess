@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lichess_mobile/src/model/auth/auth_controller.dart';
 import 'package:lichess_mobile/src/model/study/study.dart';
+import 'package:lichess_mobile/src/model/study/study_controller.dart';
 import 'package:lichess_mobile/src/model/study/study_filter.dart';
 import 'package:lichess_mobile/src/model/study/study_list_paginator.dart';
 import 'package:lichess_mobile/src/styles/lichess_icons.dart';
@@ -261,7 +262,7 @@ class StudyListItem extends StatelessWidget {
       onTap: () => Navigator.of(
         context,
         rootNavigator: true,
-      ).push(StudyScreen.buildRoute((id: study.id, initialChapter: null))),
+      ).push(StudyScreen.buildRoute(StudyOptions(id: study.id))),
       onLongPress: () {
         showModalBottomSheet<void>(
           context: context,

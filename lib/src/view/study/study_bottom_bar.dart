@@ -18,11 +18,56 @@ class StudyBottomBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(studyControllerProvider(options)).value;
+    if (state?.isPractice == true) {
+      return _PracticeBottomBar(options: options);
+    }
+
     final gamebook = ref.watch(
       studyControllerProvider(options).select((s) => s.requireValue.gamebookActive),
     );
 
     return gamebook ? _GamebookBottomBar(options: options) : _AnalysisBottomBar(options: options);
+  }
+}
+
+class _PracticeBottomBar extends ConsumerWidget {
+  const _PracticeBottomBar({required this.options});
+
+  final StudyOptions options;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(studyControllerProvider(options)).requireValue;
+    return BottomBar(
+      children: [
+        _ChapterButton(options: options),
+        BottomBarButton(
+          onTap: !state.currentNode.isRoot
+              ? ref.read(studyControllerProvider(options).notifier).reset
+              : null,
+          icon: Icons.refresh,
+          label: context.l10n.retry,
+          showLabel: true,
+        ),
+        if (state.practiceCompleted)
+          _NextChapterButton(
+            options: options,
+            chapterId: state.study.chapter.id,
+            hasNextChapter: state.hasNextChapter,
+            blink: state.hasNextChapter,
+          )
+        else
+          BottomBarButton(
+            onTap: state.canGoBack
+                ? ref.read(studyControllerProvider(options).notifier).userPrevious
+                : null,
+            icon: CupertinoIcons.chevron_back,
+            label: context.l10n.studyBack,
+            showLabel: true,
+          ),
+      ],
+    );
   }
 }
 

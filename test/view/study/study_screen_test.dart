@@ -11,6 +11,7 @@ import 'package:lichess_mobile/src/model/common/id.dart';
 import 'package:lichess_mobile/src/model/engine/evaluation_preferences.dart';
 import 'package:lichess_mobile/src/model/settings/preferences_storage.dart';
 import 'package:lichess_mobile/src/model/study/study.dart';
+import 'package:lichess_mobile/src/model/study/study_controller.dart';
 import 'package:lichess_mobile/src/model/study/study_preferences.dart';
 import 'package:lichess_mobile/src/model/study/study_repository.dart';
 import 'package:lichess_mobile/src/model/user/user.dart';
@@ -88,7 +89,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -146,7 +147,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -233,7 +234,9 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: StudyChapterId('2'))),
+        home: const StudyScreen(
+          options: StudyOptions(id: testId, initialChapter: StudyChapterId('2')),
+        ),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -263,7 +266,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -308,7 +311,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -362,7 +365,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -497,7 +500,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -609,7 +612,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -682,7 +685,7 @@ void main() {
 
     final app = await makeTestProviderScopeApp(
       tester,
-      home: const StudyScreen(options: (id: testId, initialChapter: null)),
+      home: const StudyScreen(options: StudyOptions(id: testId)),
       overrides: {
         studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
       },
@@ -771,7 +774,7 @@ void main() {
 
     final app = await makeTestProviderScopeApp(
       tester,
-      home: const StudyScreen(options: (id: testId, initialChapter: null)),
+      home: const StudyScreen(options: StudyOptions(id: testId)),
       overrides: {
         studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
       },
@@ -813,7 +816,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -848,7 +851,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -893,7 +896,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },
@@ -939,7 +942,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const StudyScreen(options: (id: testId, initialChapter: null)),
+        home: const StudyScreen(options: StudyOptions(id: testId)),
         overrides: {
           studyRepositoryProvider: studyRepositoryProvider.overrideWith((ref) => mockRepository),
         },

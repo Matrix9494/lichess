@@ -204,9 +204,31 @@ class _StudyScreenState extends ConsumerState<_StudyScreen> with TickerProviderS
             Flexible(child: AppBarTitleText(widget.studyState.currentChapterTitle)),
           ],
         ),
-        actions: [_StudyMenu(options: widget.options)],
+        actions: [
+          if (widget.options.practice)
+            _PracticeMenu(options: widget.options)
+          else
+            _StudyMenu(options: widget.options),
+        ],
       ),
       body: _Body(options: widget.options, tabController: _tabController, tabs: tabs),
+    );
+  }
+}
+
+class _PracticeMenu extends ConsumerWidget {
+  const _PracticeMenu({required this.options});
+
+  final StudyOptions options;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      icon: const Icon(CupertinoIcons.arrow_2_squarepath),
+      tooltip: context.l10n.flipBoard,
+      onPressed: () {
+        ref.read(studyControllerProvider(options).notifier).toggleBoard();
+      },
     );
   }
 }

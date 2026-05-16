@@ -13,13 +13,14 @@ import 'package:lichess_mobile/src/network/http.dart';
 
 /// A provider for [StudyRepository].
 final studyRepositoryProvider = Provider<StudyRepository>((Ref ref) {
-  return StudyRepository(ref, ref.watch(lichessClientProvider));
+  return StudyRepository(ref, ref.watch(lichessClientProvider), ref.watch(defaultClientProvider));
 }, name: 'StudyRepositoryProvider');
 
 class StudyRepository {
-  StudyRepository(this.ref, this.client);
+  StudyRepository(this.ref, this.client, [this.anonymousClient]);
 
   final Client client;
+  final Client? anonymousClient;
   final Ref ref;
 
   Future<StudyList> getStudies({
@@ -49,7 +50,7 @@ class StudyRepository {
     required Map<String, String> queryParameters,
   }) {
     return client.readJson(
-      Uri(path: '/study/$path', queryParameters: queryParameters),
+      lichessUri('/study/$path', queryParameters),
       headers: {'Accept': 'application/json'},
       mapper: (Map<String, dynamic> json) {
         final paginator = pick(json, 'paginator').asMapOrThrow<String, dynamic>();
@@ -69,20 +70,14 @@ class StudyRepository {
     required StudyId id,
     StudyChapterId? chapterId,
   }) async {
-    final study = await client.readJson(
-      Uri(
-        path: (chapterId != null) ? '/study/$id/$chapterId' : '/study/$id',
-        queryParameters: {'chapters': '1'},
-      ),
+    final study = await _readOpenJson(
+      lichessUri((chapterId != null) ? '/study/$id/$chapterId' : '/study/$id', {'chapters': '1'}),
       headers: {'Accept': 'application/json'},
       mapper: Study.fromServerJson,
     );
 
-    final response = await client.readResponse(
-      Uri(
-        path: '/api/study/$id/${chapterId ?? study.chapter.id}.pgn',
-        queryParameters: {'analysisHeader': '1'},
-      ),
+    final response = await _readOpenResponse(
+      lichessUri('/api/study/$id/${chapterId ?? study.chapter.id}.pgn', {'analysisHeader': '1'}),
       headers: {'Accept': 'application/x-chess-pgn'},
     );
 
@@ -91,10 +86,32 @@ class StudyRepository {
 
   Future<String> getStudyPgn(StudyId id) async {
     final pgnBytes = await client.readBytes(
-      Uri(path: '/api/study/$id.pgn'),
+      lichessUri('/api/study/$id.pgn'),
       headers: {'Accept': 'application/x-chess-pgn'},
     );
 
     return utf8.decode(pgnBytes);
+  }
+
+  Future<T> _readOpenJson<T>(
+    Uri uri, {
+    Map<String, String>? headers,
+    required T Function(Map<String, dynamic>) mapper,
+  }) async {
+    try {
+      return await client.readJson(uri, headers: headers, mapper: mapper);
+    } on ServerException catch (e) {
+      if (e.statusCode != 403 || anonymousClient == null) rethrow;
+      return anonymousClient!.readJson(uri, headers: headers, mapper: mapper);
+    }
+  }
+
+  Future<Response> _readOpenResponse(Uri uri, {Map<String, String>? headers}) async {
+    try {
+      return await client.readResponse(uri, headers: headers);
+    } on ServerException catch (e) {
+      if (e.statusCode != 403 || anonymousClient == null) rethrow;
+      return anonymousClient!.readResponse(uri, headers: headers);
+    }
   }
 }
