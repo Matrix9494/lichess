@@ -40,6 +40,7 @@ import 'package:lichess_mobile/src/widgets/adaptive_action_sheet.dart';
 import 'package:lichess_mobile/src/widgets/adaptive_choice_picker.dart';
 import 'package:lichess_mobile/src/widgets/bottom_bar.dart';
 import 'package:lichess_mobile/src/widgets/buttons.dart';
+import 'package:lichess_mobile/src/widgets/chess960_position_picker.dart';
 import 'package:lichess_mobile/src/widgets/feedback.dart';
 import 'package:lichess_mobile/src/widgets/platform_context_menu_button.dart';
 import 'package:lichess_mobile/src/widgets/user.dart';
@@ -329,6 +330,7 @@ class _Body extends ConsumerWidget {
             pov: pov,
             isComputerAnalysisAllowed: analysisState.isComputerAnalysisAllowed,
             position: currentNode.position,
+            variant: analysisState.variant,
             opening: kOpeningAllowedVariants.contains(analysisState.variant)
                 ? analysisState.currentNode.isRoot
                       ? LightOpening(eco: '', name: context.l10n.startPosition)
@@ -548,26 +550,35 @@ class _BottomBar extends ConsumerWidget {
             onPressed: () => showChoicePicker<Variant>(
               context,
               choices: readSupportedVariants
-                  .where(
-                    (variant) => variant != Variant.fromPosition && variant != Variant.chess960,
-                  )
+                  .where((variant) => variant != Variant.fromPosition)
                   .toList(),
               selectedItem: analysisState.variant,
               labelBuilder: (variant) => VariantLabel(variant),
-              onSelectedItemChanged: (Variant variant) =>
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    ref
-                        .read(analysisControllerProvider(options).notifier)
-                        .clearSavedStandaloneAnalysis();
-                    Navigator.of(context, rootNavigator: true).pushReplacement(
-                      buildScreenRoute<dynamic>(
-                        screen: AnalysisScreen(
-                          options: (options as Standalone).copyWith(variant: variant),
+              onSelectedItemChanged: (Variant variant) {
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  String? initialFen;
+                  if (variant == Variant.chess960) {
+                    final position = await showChess960PositionPicker(context);
+                    if (position == null || !context.mounted) return;
+                    initialFen = position.fen;
+                  }
+                  if (!context.mounted) return;
+                  ref
+                      .read(analysisControllerProvider(options).notifier)
+                      .clearSavedStandaloneAnalysis();
+                  Navigator.of(context, rootNavigator: true).pushReplacement(
+                    buildScreenRoute<dynamic>(
+                      screen: AnalysisScreen(
+                        options: (options as Standalone).copyWith(
+                          variant: variant,
+                          initialFen: initialFen,
                         ),
-                        transitionDuration: Duration.zero,
                       ),
-                    );
-                  }),
+                      transitionDuration: Duration.zero,
+                    ),
+                  );
+                });
+              },
             ),
           ),
         ],

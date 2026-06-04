@@ -209,9 +209,16 @@ void main() {
 
       // Go back to "more" screen and open opening explorer
       await tester.pageBack();
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Opening explorer'));
+      await tester.pumpAndSettle(); // wait for variant picker to open
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) => widget is RadioListTile<Variant?> && widget.value == Variant.standard,
+        ),
+      );
       await tester.pumpAndSettle(); // wait for opening explorer screen to open
 
       // Should not use saved standalone analysis here

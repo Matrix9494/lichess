@@ -143,6 +143,7 @@ class _Body extends ConsumerWidget {
                                 child: OpeningExplorerView(
                                   pov: options.orientation,
                                   position: state.currentPosition,
+                                  variant: state.variant,
                                   opening: state.currentNode.isRoot
                                       ? LightOpening(eco: '', name: context.l10n.startPosition)
                                       : state.currentNode.opening ?? state.currentBranchOpening,
@@ -188,6 +189,7 @@ class _Body extends ConsumerWidget {
                         child: OpeningExplorerView(
                           pov: options.orientation,
                           position: state.currentPosition,
+                          variant: state.variant,
                           opening: state.currentNode.isRoot
                               ? LightOpening(eco: '', name: context.l10n.startPosition)
                               : state.currentNode.opening ?? state.currentBranchOpening,

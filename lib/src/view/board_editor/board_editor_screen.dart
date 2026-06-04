@@ -27,6 +27,7 @@ import 'package:lichess_mobile/src/widgets/adaptive_action_sheet.dart';
 import 'package:lichess_mobile/src/widgets/adaptive_choice_picker.dart';
 import 'package:lichess_mobile/src/widgets/bottom_bar.dart';
 import 'package:lichess_mobile/src/widgets/buttons.dart';
+import 'package:lichess_mobile/src/widgets/chess960_position_picker.dart';
 import 'package:lichess_mobile/src/widgets/feedback.dart';
 import 'package:lichess_mobile/src/widgets/platform.dart';
 import 'package:lichess_mobile/src/widgets/variant_app_bar_title.dart';
@@ -364,16 +365,23 @@ class _BottomBar extends ConsumerWidget {
                 onPressed: () => showChoicePicker<Variant>(
                   context,
                   choices: readSupportedVariants
-                      .where(
-                        // TODO, for chess960 to be meaningful here, we'd need to display a dialog to load one of the starting positions
-                        (variant) => variant != Variant.fromPosition && variant != Variant.chess960,
-                      )
+                      .where((variant) => variant != Variant.fromPosition)
                       .toList(),
                   selectedItem: editorState.variant,
                   labelBuilder: (variant) => VariantLabel(variant),
                   onSelectedItemChanged: (Variant variant) {
                     if (variant != editorState.variant) {
-                      ref.read(editorController.notifier).setVariant(variant);
+                      WidgetsBinding.instance.addPostFrameCallback((_) async {
+                        final controller = ref.read(editorController.notifier);
+                        if (variant == Variant.chess960) {
+                          final position = await showChess960PositionPicker(context);
+                          if (position == null || !context.mounted) return;
+                          controller.setVariant(variant);
+                          controller.loadFen(position.fen);
+                        } else {
+                          controller.setVariant(variant);
+                        }
+                      });
                     }
                   },
                 ),
@@ -414,7 +422,7 @@ class _BottomBar extends ConsumerWidget {
                         orientation: editorState.orientation,
                         pgn: editorState.pgn!,
                         isComputerAnalysisAllowed: true,
-                        variant: editorState.variant.rule == Rule.chess
+                        variant: editorState.variant == Variant.standard
                             ? Variant.fromPosition
                             : editorState.variant,
                       ),

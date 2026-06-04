@@ -26,12 +26,14 @@ class OpeningExplorerView extends ConsumerStatefulWidget {
     required this.position,
     required this.onMoveSelected,
     this.opening,
+    this.variant,
     this.scrollable = true,
     this.shouldDisplayGames = true,
   });
 
   final Side pov;
   final Position position;
+  final Variant? variant;
   final Opening? opening;
   final void Function(Move) onMoveSelected;
   final bool scrollable;
@@ -65,7 +67,7 @@ class _OpeningExplorerState extends ConsumerState<OpeningExplorerView> {
     }
 
     final prefs = ref.watch(openingExplorerPreferencesProvider);
-    final variant = Variant.fromRule(widget.position.rule);
+    final variant = widget.variant ?? Variant.fromRule(widget.position.rule);
 
     if (prefs.db == OpeningDatabase.player && prefs.playerDb.username == null) {
       return const Center(

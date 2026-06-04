@@ -48,6 +48,7 @@ sealed class AnalysisOptions with _$AnalysisOptions {
 
   const factory AnalysisOptions.standalone({
     required Variant variant,
+    String? initialFen,
     @Default(null) int? initialMoveCursor,
     @Default(Side.white) Side orientation,
   }) = Standalone;
@@ -226,6 +227,10 @@ class AnalysisController extends AsyncNotifier<AnalysisState>
     UciPath path = UciPath.empty;
     UciPath mainlinePath = UciPath.empty;
     Move? lastMove;
+    final initialFen = switch (options) {
+      Standalone(:final initialFen) => initialFen,
+      _ => null,
+    };
 
     final game = PgnGame.parsePgn(
       pgn,
@@ -242,6 +247,8 @@ class AnalysisController extends AsyncNotifier<AnalysisState>
               'Result': '*',
               'WhiteElo': '?',
               'BlackElo': '?',
+              if (initialFen != null) 'FEN': initialFen,
+              if (initialFen != null) 'SetUp': '1',
             },
     );
 

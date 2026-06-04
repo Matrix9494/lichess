@@ -23,11 +23,14 @@ import 'package:lichess_mobile/src/view/more/import_pgn_screen.dart';
 import 'package:lichess_mobile/src/view/relation/friend_screen.dart';
 import 'package:lichess_mobile/src/view/settings/settings_screen.dart';
 import 'package:lichess_mobile/src/view/user/player_screen.dart';
+import 'package:lichess_mobile/src/widgets/adaptive_choice_picker.dart';
+import 'package:lichess_mobile/src/widgets/chess960_position_picker.dart';
 import 'package:lichess_mobile/src/widgets/list.dart';
 import 'package:lichess_mobile/src/widgets/misc.dart';
 import 'package:lichess_mobile/src/widgets/platform.dart';
 import 'package:lichess_mobile/src/widgets/settings.dart';
 import 'package:lichess_mobile/src/widgets/user.dart';
+import 'package:lichess_mobile/src/widgets/variant_app_bar_title.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MoreTabScreen extends ConsumerWidget {
@@ -105,17 +108,7 @@ class _Body extends ConsumerWidget {
                     : null,
                 title: Text(context.l10n.openingExplorer),
                 enabled: isOnline,
-                onTap: () => Navigator.of(context, rootNavigator: true).push(
-                  OpeningExplorerScreen.buildRoute(
-                    const AnalysisOptions.pgn(
-                      id: StringId('standalone_opening_explorer'),
-                      orientation: Side.white,
-                      pgn: '',
-                      isComputerAnalysisAllowed: false,
-                      variant: Variant.standard,
-                    ),
-                  ),
-                ),
+                onTap: () => _showOpeningExplorerVariantPicker(context),
               ),
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
@@ -202,7 +195,47 @@ class _Body extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _showOpeningExplorerVariantPicker(BuildContext context) async {
+    Variant? selectedVariant;
+
+    await showChoicePicker<Variant?>(
+      context,
+      choices: const <Variant?>[Variant.standard, Variant.chess960],
+      selectedItem: null,
+      labelBuilder: (variant) => VariantLabel(variant!),
+      onSelectedItemChanged: (variant) => selectedVariant = variant,
+    );
+
+    if (!context.mounted || selectedVariant == null) return;
+
+    final variant = selectedVariant!;
+    String pgn = '';
+    if (variant == Variant.chess960) {
+      final position = await showChess960PositionPicker(context);
+      if (position == null || !context.mounted) return;
+      pgn = _emptyPgn(variant: variant, fen: position.fen);
+    }
+
+    Navigator.of(context, rootNavigator: true).push(
+      OpeningExplorerScreen.buildRoute(
+        AnalysisOptions.pgn(
+          id: const StringId('standalone_opening_explorer'),
+          orientation: Side.white,
+          pgn: pgn,
+          isComputerAnalysisAllowed: false,
+          variant: variant,
+        ),
+      ),
+    );
+  }
 }
+
+String _emptyPgn({required Variant variant, required String fen}) =>
+    '[Variant "${variant.pgnName}"]\n'
+    '[FEN "$fen"]\n'
+    '[SetUp "1"]\n\n'
+    '*';
 
 class _AccountSection extends ConsumerWidget {
   const _AccountSection();

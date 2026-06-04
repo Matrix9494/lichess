@@ -33,11 +33,13 @@ class ExplorerView extends ConsumerWidget {
     required this.position,
     required this.onMoveSelected,
     required this.isComputerAnalysisAllowed,
+    this.variant,
     this.opening,
   });
 
   final Side pov;
   final Position position;
+  final Variant? variant;
   final bool isComputerAnalysisAllowed;
   final Opening? opening;
   final void Function(Move) onMoveSelected;
@@ -69,6 +71,7 @@ class ExplorerView extends ConsumerWidget {
       pov: pov,
       shouldDisplayGames: isComputerAnalysisAllowed,
       position: position,
+      variant: variant,
       opening: opening,
       onMoveSelected: onMoveSelected,
     );
