@@ -512,9 +512,9 @@ void main() {
             appBar: AppBar(title: const Text('Test Screen')),
             body: FilledButton(
               child: const Text('Go to game'),
-              onPressed: () => Navigator.of(
-                context,
-              ).push(buildScreenRoute<void>(screen: const OfflineComputerGameScreen())),
+              onPressed: () => Navigator.of(context).push(
+                buildScreenRoute<void>(screen: const OfflineComputerGameScreen(resumeGame: true)),
+              ),
             ),
           ),
         ),
@@ -597,7 +597,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const OfflineComputerGameScreen(),
+        home: const OfflineComputerGameScreen(resumeGame: true),
         overrides: {
           offlineComputerGameStorageProvider: offlineComputerGameStorageProvider.overrideWith(
             (_) => gameStorage,
@@ -611,7 +611,7 @@ void main() {
       expect(getBoardLastMove(tester), Move.parse('e7e5'));
     });
 
-    testWidgets('Game is saved when exiting with confirmation', (tester) async {
+    testWidgets('Abortable game is saved when exiting with confirmation', (tester) async {
       final gameStorage = MockOfflineComputerGameStorage();
 
       when(() => gameStorage.fetchGame()).thenAnswer((_) async => null);
@@ -646,17 +646,7 @@ void main() {
       await tester.tap(find.text('Play'));
       await tester.pumpAndSettle();
 
-      // Play a move so the game is not abortable
-      await playMove(tester, 'e2', 'e4');
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pumpAndSettle();
-
-      // Play another move to ensure game is resignable (fullmoves > 1)
-      await playMove(tester, 'd2', 'd4');
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pumpAndSettle();
-
-      // Try to go back - should show confirmation dialog
+      // Try to go back before any moves - should still show confirmation and save.
       await tester.pageBack();
       await tester.pumpAndSettle();
 

@@ -200,7 +200,7 @@ void main() {
 
       final app = await makeTestProviderScopeApp(
         tester,
-        home: const OverTheBoardScreen(),
+        home: const OverTheBoardScreen(resumeGame: true),
         overrides: {
           overTheBoardGameStorageProvider: overTheBoardGameStorageProvider.overrideWith(
             (_) => gameStorage,
@@ -346,7 +346,7 @@ void main() {
               child: const Text('OTB'),
               onPressed: () => Navigator.of(
                 context,
-              ).push(buildScreenRoute<void>(screen: const OverTheBoardScreen())),
+              ).push(buildScreenRoute<void>(screen: const OverTheBoardScreen(resumeGame: true))),
             ),
           ),
         ),
@@ -365,7 +365,7 @@ void main() {
 
       verify(() => gameStorage.fetchOngoingGame()).called(1);
 
-      // Should not show bottom sheet if we loaded a previous game
+      // Should not show configure sheet if we loaded a previous game
       expect(find.text('Play'), findsNothing);
 
       // Should load the game's current position, i.e. e4 and e5 were played
@@ -395,6 +395,66 @@ void main() {
           timeIncrement: const TimeIncrement(5, 3),
           whiteTimeLeft: const Duration(minutes: 2),
           blackTimeLeft: const Duration(minutes: 1),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('Abortable game is saved when exiting with confirmation', (tester) async {
+      final gameStorage = MockOverTheBoardGameStorage();
+
+      when(() => gameStorage.fetchOngoingGame()).thenAnswer((_) async => null);
+      when(
+        () => gameStorage.save(
+          any(),
+          timeIncrement: any(named: 'timeIncrement'),
+          whiteTimeLeft: any(named: 'whiteTimeLeft'),
+          blackTimeLeft: any(named: 'blackTimeLeft'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final app = await makeTestProviderScopeApp(
+        tester,
+        home: Builder(
+          builder: (context) => Scaffold(
+            appBar: AppBar(title: const Text('Test OTB Screen')),
+            body: FilledButton(
+              child: const Text('OTB'),
+              onPressed: () => Navigator.of(
+                context,
+              ).push(buildScreenRoute<void>(screen: const OverTheBoardScreen())),
+            ),
+          ),
+        ),
+        overrides: {
+          overTheBoardGameStorageProvider: overTheBoardGameStorageProvider.overrideWith(
+            (_) => gameStorage,
+          ),
+        },
+      );
+      await tester.pumpWidget(app);
+
+      await tester.tap(find.text('OTB'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Play'));
+      await tester.pumpAndSettle();
+
+      // Try to go back before any moves - should still show confirmation and save.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Are you sure?'), findsOneWidget);
+      expect(find.text('No worries, your game will be saved.'), findsOneWidget);
+
+      await tester.tap(find.text('Yes'));
+      await tester.pumpAndSettle();
+
+      verify(
+        () => gameStorage.save(
+          any(),
+          timeIncrement: any(named: 'timeIncrement'),
+          whiteTimeLeft: any(named: 'whiteTimeLeft'),
+          blackTimeLeft: any(named: 'blackTimeLeft'),
         ),
       ).called(1);
     });

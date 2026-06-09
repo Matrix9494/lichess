@@ -34,7 +34,12 @@ import 'package:lichess_mobile/src/widgets/game_layout.dart';
 import 'package:lichess_mobile/src/widgets/yes_no_dialog.dart';
 
 class OverTheBoardScreen extends StatelessWidget {
-  const OverTheBoardScreen({this.initialFen, this.initialVariant, super.key});
+  const OverTheBoardScreen({
+    this.initialFen,
+    this.initialVariant,
+    this.resumeGame = false,
+    super.key,
+  });
 
   /// Optional initial FEN to start the game from a custom position.
   final String? initialFen;
@@ -42,9 +47,20 @@ class OverTheBoardScreen extends StatelessWidget {
   /// Initial variant to be preselected in the "New Game" dialog.
   final Variant? initialVariant;
 
-  static Route<void> buildRoute({Variant? initialVariant, String? initialFen}) {
+  /// Whether to resume the saved game, if one is available.
+  final bool resumeGame;
+
+  static Route<void> buildRoute({
+    Variant? initialVariant,
+    String? initialFen,
+    bool resumeGame = false,
+  }) {
     return buildScreenRoute(
-      screen: OverTheBoardScreen(initialVariant: initialVariant, initialFen: initialFen),
+      screen: OverTheBoardScreen(
+        initialVariant: initialVariant,
+        initialFen: initialFen,
+        resumeGame: resumeGame,
+      ),
     );
   }
 
@@ -61,17 +77,23 @@ class OverTheBoardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: _Body(initialVariant: initialVariant ?? Variant.standard, initialFen: initialFen),
+      body: _Body(
+        initialVariant: initialVariant ?? Variant.standard,
+        initialFen: initialFen,
+        resumeGame: resumeGame,
+      ),
     );
   }
 }
 
 class _Body extends ConsumerStatefulWidget {
-  const _Body({required this.initialVariant, this.initialFen});
+  const _Body({required this.initialVariant, required this.resumeGame, this.initialFen});
 
   final Variant initialVariant;
 
   final String? initialFen;
+
+  final bool resumeGame;
 
   @override
   ConsumerState<_Body> createState() => _BodyState();
@@ -99,21 +121,26 @@ class _BodyState extends ConsumerState<_Body> {
         return;
       }
 
-      final ongoingGame = await ref.read(overTheBoardGameStorageProvider).fetchOngoingGame();
-      if (ongoingGame != null && ongoingGame.game.steps.length > 1 && !ongoingGame.game.finished) {
-        ref.read(overTheBoardGameControllerProvider.notifier).loadOngoingGame(ongoingGame.game);
-
-        ref
-            .read(overTheBoardClockProvider.notifier)
-            .setupClock(
-              ongoingGame.timeIncrement,
-              whiteTimeLeft: ongoingGame.whiteTimeLeft,
-              blackTimeLeft: ongoingGame.blackTimeLeft,
-            );
-      } else {
+      if (widget.resumeGame) {
+        final ongoingGame = await ref.read(overTheBoardGameStorageProvider).fetchOngoingGame();
+        if (ongoingGame != null && _canResume(ongoingGame)) {
+          ref.read(overTheBoardGameControllerProvider.notifier).loadOngoingGame(ongoingGame.game);
+          ref
+              .read(overTheBoardClockProvider.notifier)
+              .setupClock(
+                ongoingGame.timeIncrement,
+                whiteTimeLeft: ongoingGame.whiteTimeLeft,
+                blackTimeLeft: ongoingGame.blackTimeLeft,
+              );
+          return;
+        }
         if (!mounted) return;
         showConfigureGameSheet(context, initialVariant: widget.initialVariant, isDismissible: true);
+        return;
       }
+
+      if (!mounted) return;
+      showConfigureGameSheet(context, initialVariant: widget.initialVariant, isDismissible: true);
     });
   }
 
@@ -130,6 +157,9 @@ class _BodyState extends ConsumerState<_Body> {
           blackTimeLeft: clockState.blackTimeLeft,
         );
   }
+
+  bool _canResume(SavedOtbGame savedGame) =>
+      savedGame.game.steps.length > 1 && !savedGame.game.finished;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +231,8 @@ class _BodyState extends ConsumerState<_Body> {
 
           final navigator = Navigator.of(context);
           final game = gameState.game;
-          if (game.abortable || game.finished) {
+          if (game.finished) {
+            _saveGameState();
             return navigator.pop();
           }
 

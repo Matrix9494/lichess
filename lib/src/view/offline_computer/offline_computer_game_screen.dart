@@ -63,7 +63,12 @@ extension _PracticeCommentDisplay on PracticeComment {
 }
 
 class OfflineComputerGameScreen extends ConsumerWidget {
-  const OfflineComputerGameScreen({this.initialVariant, this.initialFen, super.key});
+  const OfflineComputerGameScreen({
+    this.initialVariant,
+    this.initialFen,
+    this.resumeGame = false,
+    super.key,
+  });
 
   /// Optional initial variant to be preselected in the "New Game" dialog.
   ///
@@ -73,9 +78,20 @@ class OfflineComputerGameScreen extends ConsumerWidget {
   /// Optional initial FEN to start the game from a custom position.
   final String? initialFen;
 
-  static Route<void> buildRoute({Variant? initialVariant, String? initialFen}) {
+  /// Whether to resume the saved game, if one is available.
+  final bool resumeGame;
+
+  static Route<void> buildRoute({
+    Variant? initialVariant,
+    String? initialFen,
+    bool resumeGame = false,
+  }) {
     return buildScreenRoute(
-      screen: OfflineComputerGameScreen(initialVariant: initialVariant, initialFen: initialFen),
+      screen: OfflineComputerGameScreen(
+        initialVariant: initialVariant,
+        initialFen: initialFen,
+        resumeGame: resumeGame,
+      ),
     );
   }
 
@@ -105,17 +121,19 @@ class OfflineComputerGameScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: _Body(initialVariant: initialVariant, initialFen: initialFen),
+      body: _Body(initialVariant: initialVariant, initialFen: initialFen, resumeGame: resumeGame),
     );
   }
 }
 
 class _Body extends ConsumerStatefulWidget {
-  const _Body({required this.initialVariant, this.initialFen});
+  const _Body({required this.initialVariant, required this.resumeGame, this.initialFen});
 
   final Variant? initialVariant;
 
   final String? initialFen;
+
+  final bool resumeGame;
 
   @override
   ConsumerState<_Body> createState() => _BodyState();
@@ -136,13 +154,19 @@ class _BodyState extends ConsumerState<_Body> {
         return;
       }
 
-      final savedGame = await ref.read(offlineComputerGameStorageProvider).fetchGame();
-      if (savedGame != null && savedGame.game.steps.length > 1) {
-        ref.read(offlineComputerGameControllerProvider.notifier).loadGame(savedGame);
-      } else {
+      if (widget.resumeGame) {
+        final savedGame = await ref.read(offlineComputerGameStorageProvider).fetchGame();
+        if (savedGame != null && _canResume(savedGame.game)) {
+          ref.read(offlineComputerGameControllerProvider.notifier).loadGame(savedGame);
+          return;
+        }
         if (!mounted) return;
         _showNewGameDialog(initialVariant: widget.initialVariant);
+        return;
       }
+
+      if (!mounted) return;
+      _showNewGameDialog(initialVariant: widget.initialVariant);
     });
   }
 
@@ -212,10 +236,6 @@ class _BodyState extends ConsumerState<_Body> {
 
           final navigator = Navigator.of(context);
           final game = gameState.game;
-          if (game.abortable) {
-            return navigator.pop();
-          }
-
           if (game.playable) {
             final shouldPop = await showAdaptiveDialog<bool>(
               context: context,
@@ -300,6 +320,8 @@ class _BodyState extends ConsumerState<_Body> {
           _NewGameSheet(initialVariant: initialVariant, initialFen: widget.initialFen),
     );
   }
+
+  bool _canResume(OfflineComputerGame game) => game.steps.length > 1 && !game.finished;
 
   ISet<Shape>? _buildBoardShapes(
     OfflineComputerGameState gameState,

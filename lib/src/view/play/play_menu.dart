@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lichess_mobile/src/model/common/perf.dart';
+import 'package:lichess_mobile/src/model/offline_computer/offline_computer_game_storage.dart';
+import 'package:lichess_mobile/src/model/over_the_board/over_the_board_game_storage.dart';
 import 'package:lichess_mobile/src/network/connectivity.dart';
 import 'package:lichess_mobile/src/styles/lichess_icons.dart';
 import 'package:lichess_mobile/src/utils/l10n_context.dart';
@@ -12,12 +14,28 @@ import 'package:lichess_mobile/src/view/play/create_game_widget.dart';
 import 'package:lichess_mobile/src/view/tournament/tournament_list_screen.dart';
 import 'package:lichess_mobile/src/widgets/list.dart';
 
+final _hasResumableOfflineComputerGameProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final savedGame = await ref.watch(offlineComputerGameStorageProvider).fetchGame();
+  return savedGame != null && savedGame.game.steps.length > 1 && !savedGame.game.finished;
+});
+
+final _hasResumableOtbGameProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final savedGame = await ref.watch(overTheBoardGameStorageProvider).fetchOngoingGame();
+  return savedGame != null && savedGame.game.steps.length > 1 && !savedGame.game.finished;
+});
+
 class PlayMenu extends ConsumerWidget {
   const PlayMenu();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isOnline = ref.watch(onlineStatusProvider).value ?? false;
+    final hasResumableOfflineComputerGame = ref
+        .watch(_hasResumableOfflineComputerGameProvider)
+        .maybeWhen(data: (hasGame) => hasGame, orElse: () => false);
+    final hasResumableOtbGame = ref
+        .watch(_hasResumableOtbGameProvider)
+        .maybeWhen(data: (hasGame) => hasGame, orElse: () => false);
 
     return Column(
       children: [
@@ -70,29 +88,52 @@ class PlayMenu extends ConsumerWidget {
             ),
             ListTile(
               onTap: () {
-                // Pops the play bottom sheet
-                Navigator.of(context).popUntil((route) => route is! ModalBottomSheetRoute);
-                Navigator.of(
-                  context,
-                  rootNavigator: true,
-                ).push(OfflineComputerGameScreen.buildRoute());
+                _openOfflineComputerGame(context);
               },
               leading: const Icon(Icons.memory),
               title: Text(context.l10n.playAgainstComputer),
+              trailing: hasResumableOfflineComputerGame
+                  ? _ResumeButton(
+                      key: const ValueKey('resumeOfflineComputerGameButton'),
+                      onPressed: () => _openOfflineComputerGame(context, resumeGame: true),
+                    )
+                  : null,
             ),
             ListTile(
               onTap: () {
-                // Pops the play bottom sheet
-                Navigator.of(context).popUntil((route) => route is! ModalBottomSheetRoute);
-                Navigator.of(context, rootNavigator: true).push(OverTheBoardScreen.buildRoute());
+                _openOverTheBoardGame(context);
               },
               leading: const Icon(Icons.table_restaurant_outlined),
               title: Text(context.l10n.mobileOverTheBoard),
+              trailing: hasResumableOtbGame
+                  ? _ResumeButton(
+                      key: const ValueKey('resumeOtbGameButton'),
+                      onPressed: () => _openOverTheBoardGame(context, resumeGame: true),
+                    )
+                  : null,
             ),
           ],
         ),
       ],
     );
+  }
+
+  void _openOfflineComputerGame(BuildContext context, {bool resumeGame = false}) {
+    // Pops the play bottom sheet
+    Navigator.of(context).popUntil((route) => route is! ModalBottomSheetRoute);
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(OfflineComputerGameScreen.buildRoute(resumeGame: resumeGame));
+  }
+
+  void _openOverTheBoardGame(BuildContext context, {bool resumeGame = false}) {
+    // Pops the play bottom sheet
+    Navigator.of(context).popUntil((route) => route is! ModalBottomSheetRoute);
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(OverTheBoardScreen.buildRoute(resumeGame: resumeGame));
   }
 }
 
@@ -104,5 +145,20 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListSection(hasLeading: true, materialFilledCard: true, children: children);
+  }
+}
+
+class _ResumeButton extends StatelessWidget {
+  const _ResumeButton({required this.onPressed, super.key});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: context.l10n.resume,
+      onPressed: onPressed,
+      icon: const Icon(Icons.play_arrow),
+    );
   }
 }
