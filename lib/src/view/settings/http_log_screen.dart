@@ -8,6 +8,7 @@ import 'package:lichess_mobile/src/styles/styles.dart';
 import 'package:lichess_mobile/src/utils/navigation.dart';
 import 'package:lichess_mobile/src/widgets/adaptive_action_sheet.dart';
 import 'package:lichess_mobile/src/widgets/haptic_refresh_indicator.dart';
+import 'package:lichess_mobile/src/widgets/platform.dart';
 import 'package:lichess_mobile/src/widgets/platform_search_bar.dart';
 
 class HttpLogScreen extends ConsumerStatefulWidget {
@@ -58,8 +59,8 @@ class _HttpLogScreenState extends ConsumerState<HttpLogScreen> {
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(httpLogPaginatorProvider(_searchQuery));
-    return Scaffold(
-      appBar: AppBar(
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
         title: const Text('HTTP logs'),
         actions: [
           if (asyncState.value?.isDeleteButtonVisible == true)
