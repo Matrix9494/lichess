@@ -113,6 +113,42 @@ void main() {
       expect(find.textContaining('4'), findsWidgets);
     });
 
+    testWidgets('Play starts a new game after the new game sheet starts closing', (tester) async {
+      final gameStorage = MockOfflineComputerGameStorage();
+      when(() => gameStorage.fetchGame()).thenAnswer((_) async => null);
+
+      final gameController = _RecordingOfflineComputerGameController(
+        OfflineComputerGameState.initial(
+          stockfishLevel: StockfishLevel.defaultLevel,
+          playerSide: Side.white,
+        ),
+      );
+      final app = await makeTestProviderScopeApp(
+        tester,
+        home: const OfflineComputerGameScreen(),
+        overrides: {
+          offlineComputerGameStorageProvider: offlineComputerGameStorageProvider.overrideWith(
+            (_) => gameStorage,
+          ),
+          offlineComputerGameControllerProvider: offlineComputerGameControllerProvider.overrideWith(
+            () => gameController,
+          ),
+        },
+      );
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      await selectSide(tester, Side.white);
+      expect(gameController.startNewGameCalls, isEmpty);
+
+      await tester.tap(find.text('Play'));
+      expect(gameController.startNewGameCalls, isEmpty);
+
+      await tester.pump();
+      expect(gameController.startNewGameCalls, hasLength(1));
+      expect(gameController.startNewGameCalls.single.playerSide, Side.white);
+    });
+
     testWidgets('Can play moves and move list updates', (tester) async {
       await initOfflineComputerGame(tester);
 
@@ -719,7 +755,9 @@ void main() {
       await selectSide(tester, Side.white);
       await tester.tap(find.text('Play'));
 
-      // Pump once to trigger hint computation but not complete it
+      // First pump starts the game after the bottom sheet begins closing. The second pump rebuilds
+      // the bottom bar with the loading hint state.
+      await tester.pump();
       await tester.pump();
 
       // Check if hints are loading
@@ -1774,6 +1812,45 @@ class _FakePracticeController extends OfflineComputerGameController {
 
   @override
   OfflineComputerGameState build() => _initialState;
+}
+
+class _RecordingOfflineComputerGameController extends OfflineComputerGameController {
+  _RecordingOfflineComputerGameController(this._initialState);
+
+  final OfflineComputerGameState _initialState;
+  final startNewGameCalls =
+      <
+        ({
+          StockfishLevel stockfishLevel,
+          Side playerSide,
+          bool casual,
+          bool practiceMode,
+          Variant variant,
+          String? initialFen,
+        })
+      >[];
+
+  @override
+  OfflineComputerGameState build() => _initialState;
+
+  @override
+  void startNewGame({
+    required StockfishLevel stockfishLevel,
+    required Side playerSide,
+    required bool casual,
+    required bool practiceMode,
+    Variant variant = Variant.standard,
+    String? initialFen,
+  }) {
+    startNewGameCalls.add((
+      stockfishLevel: stockfishLevel,
+      playerSide: playerSide,
+      casual: casual,
+      practiceMode: practiceMode,
+      variant: variant,
+      initialFen: initialFen,
+    ));
+  }
 }
 
 /// A fake preferences notifier that returns a preset [OfflineComputerGamePrefs].

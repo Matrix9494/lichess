@@ -246,11 +246,14 @@ class _ConfigureOverTheBoardGameSheetState extends ConsumerState<_ConfigureOverT
           child: FilledButton(
             onPressed: _isPlayEnabled
                 ? () {
-                    ref.read(overTheBoardClockProvider.notifier).setupClock(timeIncrement);
-                    ref
-                        .read(overTheBoardGameControllerProvider.notifier)
-                        .startNewGame(chosenVariant, timeIncrement, initialFen: _fromPositionFen);
                     Navigator.pop(context);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      ref.read(overTheBoardClockProvider.notifier).setupClock(timeIncrement);
+                      ref
+                          .read(overTheBoardGameControllerProvider.notifier)
+                          .startNewGame(chosenVariant, timeIncrement, initialFen: _fromPositionFen);
+                    });
                   }
                 : null,
             child: Text(context.l10n.play, style: Styles.bold),

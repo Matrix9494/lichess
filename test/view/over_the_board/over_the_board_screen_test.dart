@@ -36,6 +36,42 @@ const _antichessStalemateFen = '8/p7/8/P7/8/8/8/8 w - - 0 1';
 
 class MockOverTheBoardGameStorage extends Mock implements OverTheBoardGameStorage {}
 
+class _RecordingOverTheBoardGameController extends OverTheBoardGameController {
+  _RecordingOverTheBoardGameController(this._initialState);
+
+  final OverTheBoardGameState _initialState;
+  final startNewGameCalls =
+      <({Variant variant, TimeIncrement timeIncrement, String? initialFen})>[];
+
+  @override
+  OverTheBoardGameState build() => _initialState;
+
+  @override
+  void startNewGame(Variant variant, TimeIncrement timeIncrement, {String? initialFen}) {
+    startNewGameCalls.add((variant: variant, timeIncrement: timeIncrement, initialFen: initialFen));
+  }
+}
+
+class _RecordingOverTheBoardClock extends OverTheBoardClock {
+  _RecordingOverTheBoardClock(this._initialState);
+
+  final OverTheBoardClockState _initialState;
+  final setupClockCalls =
+      <({TimeIncrement timeIncrement, Duration? whiteTimeLeft, Duration? blackTimeLeft})>[];
+
+  @override
+  OverTheBoardClockState build() => _initialState;
+
+  @override
+  void setupClock(TimeIncrement timeIncrement, {Duration? whiteTimeLeft, Duration? blackTimeLeft}) {
+    setupClockCalls.add((
+      timeIncrement: timeIncrement,
+      whiteTimeLeft: whiteTimeLeft,
+      blackTimeLeft: blackTimeLeft,
+    ));
+  }
+}
+
 void main() {
   registerFallbackValue(
     OverTheBoardGame(
@@ -55,6 +91,48 @@ void main() {
   registerFallbackValue(const TimeIncrement(0, 0));
 
   group('Playing over the board (offline)', () {
+    testWidgets('Play starts a new game after the configure sheet starts closing', (tester) async {
+      final gameStorage = MockOverTheBoardGameStorage();
+      when(() => gameStorage.fetchOngoingGame()).thenAnswer((_) async => null);
+
+      final gameController = _RecordingOverTheBoardGameController(
+        OverTheBoardGameState.fromVariant(
+          Variant.standard,
+          Speed.fromTimeIncrement(const TimeIncrement(0, 0)),
+        ),
+      );
+      final clockController = _RecordingOverTheBoardClock(
+        OverTheBoardClockState.fromTimeIncrement(const TimeIncrement(60, 0)),
+      );
+
+      final app = await makeTestProviderScopeApp(
+        tester,
+        home: const OverTheBoardScreen(),
+        overrides: {
+          overTheBoardGameStorageProvider: overTheBoardGameStorageProvider.overrideWith(
+            (_) => gameStorage,
+          ),
+          overTheBoardGameControllerProvider: overTheBoardGameControllerProvider.overrideWith(
+            () => gameController,
+          ),
+          overTheBoardClockProvider: overTheBoardClockProvider.overrideWith(() => clockController),
+        },
+      );
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      expect(gameController.startNewGameCalls, isEmpty);
+      expect(clockController.setupClockCalls, isEmpty);
+
+      await tester.tap(find.text('Play'));
+      expect(gameController.startNewGameCalls, isEmpty);
+      expect(clockController.setupClockCalls, isEmpty);
+
+      await tester.pump();
+      expect(gameController.startNewGameCalls, hasLength(1));
+      expect(clockController.setupClockCalls, hasLength(1));
+    });
+
     testWidgets('Checkmate and Rematch', (tester) async {
       await initOverTheBoardGame(tester, const TimeIncrement(60, 5));
 

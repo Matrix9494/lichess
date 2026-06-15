@@ -930,17 +930,20 @@ class _NewGameSheetState extends ConsumerState<_NewGameSheet> {
                     final side =
                         _selectedSideChoice.toSide(fen: effectiveFen) ??
                         Side.values[Random().nextInt(2)];
-                    ref
-                        .read(offlineComputerGameControllerProvider.notifier)
-                        .startNewGame(
-                          stockfishLevel: _selectedLevel,
-                          playerSide: side,
-                          casual: _practiceMode || _casual,
-                          practiceMode: _practiceMode,
-                          variant: _selectedVariant,
-                          initialFen: effectiveFen,
-                        );
                     Navigator.pop(context);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      ref
+                          .read(offlineComputerGameControllerProvider.notifier)
+                          .startNewGame(
+                            stockfishLevel: _selectedLevel,
+                            playerSide: side,
+                            casual: _practiceMode || _casual,
+                            practiceMode: _practiceMode,
+                            variant: _selectedVariant,
+                            initialFen: effectiveFen,
+                          );
+                    });
                   }
                 : null,
             child: Text(context.l10n.play, style: Styles.bold),
