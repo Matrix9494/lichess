@@ -13,12 +13,18 @@ abstract class Styles {
   static const sectionTitle = TextStyle(fontSize: 18, fontWeight: FontWeight.bold);
   static const boardPreviewTitle = TextStyle(fontSize: 16, fontWeight: FontWeight.bold);
   static const subtitleOpacity = 0.7;
+  static const darkSubtitleOpacity = 0.78;
   static const timeControl = TextStyle(letterSpacing: 1.2);
   static const formLabel = TextStyle(fontWeight: FontWeight.bold);
   static const formError = TextStyle(color: LichessColors.red);
   static const formDescription = TextStyle(fontSize: 12);
   static const linkStyle = TextStyle(color: Colors.blueAccent, decoration: TextDecoration.none);
   static const noResultTextStyle = TextStyle(color: Colors.grey, fontSize: 20.0);
+
+  static double subtitleOpacityFor(Brightness brightness) => switch (brightness) {
+    Brightness.dark => darkSubtitleOpacity,
+    Brightness.light => subtitleOpacity,
+  };
 
   // padding
   static const bodyPadding = EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0);
@@ -44,9 +50,25 @@ abstract class Styles {
   }
 }
 
+/// Material dark themes make [ColorScheme.onSurface] very bright. Lichess dark
+/// surfaces read better with a softer foreground, closer to the web theme.
+ColorScheme tonedDarkTextColorScheme(ColorScheme colorScheme) {
+  return switch (colorScheme.brightness) {
+    Brightness.dark => colorScheme.copyWith(
+      onSurface: Color.lerp(colorScheme.onSurface, colorScheme.surface, 0.24),
+      onSurfaceVariant: Color.lerp(colorScheme.onSurfaceVariant, colorScheme.surface, 0.12),
+    ),
+    Brightness.light => colorScheme,
+  };
+}
+
 /// Retrieve the default text color and apply an opacity to it.
-Color? textShade(BuildContext context, double opacity) =>
-    DefaultTextStyle.of(context).style.color?.withValues(alpha: opacity);
+Color? textShade(BuildContext context, double opacity) {
+  final effectiveOpacity = opacity == Styles.subtitleOpacity
+      ? Styles.subtitleOpacityFor(Theme.of(context).brightness)
+      : opacity;
+  return DefaultTextStyle.of(context).style.color?.withValues(alpha: effectiveOpacity);
+}
 
 Color darken(Color c, [double amount = .1]) {
   assert(amount >= 0 && amount <= 1);

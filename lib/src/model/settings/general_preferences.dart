@@ -6,6 +6,7 @@ import 'package:lichess_mobile/l10n/l10n.dart';
 import 'package:lichess_mobile/src/model/settings/board_preferences.dart'
     show BoardPrefs, BoardTheme, boardPreferencesProvider;
 import 'package:lichess_mobile/src/model/settings/preferences_storage.dart';
+import 'package:lichess_mobile/src/styles/styles.dart';
 import 'package:lichess_mobile/src/theme.dart';
 import 'package:lichess_mobile/src/utils/json.dart';
 
@@ -220,10 +221,16 @@ sealed class BackgroundImage with _$BackgroundImage {
   );
 
   /// Generate a base [ThemeData] from the seed color.
-  static ThemeData getTheme(Color seedColor) => ThemeData.from(
-    colorScheme: ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark),
-    textTheme: defaultTargetPlatform == TargetPlatform.iOS ? kCupertinoDefaultTextTheme : null,
-  );
+  static ThemeData getTheme(Color seedColor) {
+    final colorScheme = tonedDarkTextColorScheme(
+      ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark),
+    );
+
+    return ThemeData.from(
+      colorScheme: colorScheme,
+      textTheme: defaultTargetPlatform == TargetPlatform.iOS ? kCupertinoDefaultTextTheme : null,
+    );
+  }
 
   /// The base theme for the background image.
   ThemeData get baseTheme => getTheme(seedColor);

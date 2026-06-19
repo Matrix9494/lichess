@@ -377,10 +377,7 @@ class PuzzleHistoryWidget extends ConsumerWidget {
 }
 
 TextStyle _puzzlePreviewSubtitleStyle(BuildContext context) {
-  return TextStyle(
-    fontSize: 14.0,
-    color: DefaultTextStyle.of(context).style.color?.withValues(alpha: 0.6),
-  );
+  return TextStyle(fontSize: 14.0, color: textShade(context, Styles.subtitleOpacity));
 }
 
 /// A widget that displays the daily puzzle.
@@ -529,9 +526,7 @@ class PuzzleAnglePreview extends ConsumerWidget {
                             style: TextStyle(
                               height: 1.2,
                               fontSize: 12.0,
-                              color: DefaultTextStyle.of(
-                                context,
-                              ).style.color?.withValues(alpha: 0.6),
+                              color: textShade(context, Styles.subtitleOpacity),
                             ),
                           ),
                         ],
@@ -563,7 +558,7 @@ class PuzzleAnglePreview extends ConsumerWidget {
                             PuzzleOpening() => PuzzleIcons.opening,
                           },
                           size: 32,
-                          color: DefaultTextStyle.of(context).style.color?.withValues(alpha: 0.6),
+                          color: textShade(context, Styles.subtitleOpacity),
                         ),
                         const SizedBox(width: 8),
                         if (puzzle != null)
@@ -577,8 +572,11 @@ class PuzzleAnglePreview extends ConsumerWidget {
                             ),
                           )
                         else
-                          const Flexible(
-                            child: Text('No puzzles available, please go online to fetch them.'),
+                          Flexible(
+                            child: Text(
+                              'No puzzles available, please go online to fetch them.',
+                              style: TextStyle(color: textShade(context, Styles.subtitleOpacity)),
+                            ),
                           ),
                       ],
                     ),

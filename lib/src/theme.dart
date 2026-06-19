@@ -88,6 +88,9 @@ ThemeData _makeDefaultTheme(
     Brightness.dark => dynamicColorSchemes?.dark,
   };
   final hasSystemColors = systemScheme != null && generalPrefs.systemColors == true;
+  final effectiveSystemScheme = systemScheme != null
+      ? tonedDarkTextColorScheme(systemScheme)
+      : null;
 
   final neutralScheme = ColorScheme.fromSeed(
     seedColor: boardTheme.colors.darkSquare,
@@ -116,12 +119,13 @@ ThemeData _makeDefaultTheme(
     scrim: neutralScheme.scrim,
     surfaceTint: neutralScheme.surfaceTint,
   );
+  final effectiveBoardScheme = tonedDarkTextColorScheme(boardScheme);
 
   final textTheme = isIOS ? kCupertinoDefaultTextTheme : null;
 
   final theme = hasSystemColors
-      ? ThemeData.from(colorScheme: systemScheme, textTheme: textTheme)
-      : ThemeData.from(colorScheme: boardScheme, textTheme: textTheme);
+      ? ThemeData.from(colorScheme: effectiveSystemScheme!, textTheme: textTheme)
+      : ThemeData.from(colorScheme: effectiveBoardScheme, textTheme: textTheme);
 
   return theme.copyWith(
     cupertinoOverrideTheme: _makeCupertinoThemeData(theme.colorScheme, brightness),
@@ -147,7 +151,11 @@ ThemeData _makeDefaultTheme(
       elevation: isIOS ? 0 : null,
     ),
     searchBarTheme: isIOS ? _kCupertinoSearchBarTheme : null,
-    iconTheme: IconThemeData(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+    iconTheme: IconThemeData(
+      color: theme.colorScheme.onSurface.withValues(
+        alpha: Styles.subtitleOpacityFor(theme.colorScheme.brightness),
+      ),
+    ),
     listTileTheme: _makeListTileTheme(theme.colorScheme, isIOS),
     cardTheme: isIOS
         ? _kCupertinoCardTheme.copyWith(color: theme.colorScheme.surfaceContainerHigh)
@@ -284,14 +292,14 @@ const MenuThemeData _kCupertinoMenuThemeData = MenuThemeData(
 );
 
 ListTileThemeData _makeListTileTheme(ColorScheme colorScheme, bool isIOS) {
+  final subtitleOpacity = Styles.subtitleOpacityFor(colorScheme.brightness);
+
   return ListTileThemeData(
-    iconColor: colorScheme.onSurface.withValues(alpha: 0.7),
+    iconColor: colorScheme.onSurface.withValues(alpha: subtitleOpacity),
     titleTextStyle: isIOS
         ? TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 16)
         : null,
-    subtitleTextStyle: TextStyle(
-      color: colorScheme.onSurface.withValues(alpha: Styles.subtitleOpacity),
-    ),
+    subtitleTextStyle: TextStyle(color: colorScheme.onSurface.withValues(alpha: subtitleOpacity)),
     contentPadding: isIOS ? const EdgeInsets.symmetric(horizontal: 16) : null,
     minTileHeight: isIOS ? 48.0 : null,
   );
