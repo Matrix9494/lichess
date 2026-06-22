@@ -40,11 +40,17 @@ class AcplChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final mainLineColor = Theme.of(context).colorScheme.secondary;
     final brightness = Theme.of(context).brightness;
-    final white = Theme.of(context).colorScheme.surfaceContainerHighest;
-    final black = Theme.of(context).colorScheme.outline;
+    // Keep advantage fills neutral. Seeded background themes can tint outline/surface colors
+    // close to the chart line color, especially on the blue preset.
+    final whiteAdvantageColor = brightness == Brightness.light
+        ? Colors.white.withValues(alpha: 0.7)
+        : Colors.white.withValues(alpha: 0.3);
+    final blackAdvantageColor = brightness == Brightness.light
+        ? Colors.black.withValues(alpha: 0.2)
+        : Colors.black;
     // Note: below/above are inverted in fl_chart
-    final belowLineColor = brightness == .light ? white : black;
-    final aboveLineColor = brightness == .light ? black : white;
+    final belowLineColor = brightness == .light ? whiteAdvantageColor : blackAdvantageColor;
+    final aboveLineColor = brightness == .light ? blackAdvantageColor : whiteAdvantageColor;
 
     final spots = params.acplChartData
         .mapIndexed((i, e) => FlSpot(i.toDouble(), e.winningChances(Side.white)))
