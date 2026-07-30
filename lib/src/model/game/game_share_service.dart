@@ -16,6 +16,9 @@ final gameShareServiceProvider = Provider<GameShareService>((Ref ref) {
   return GameShareService(ref);
 }, name: 'GameShareServiceProvider');
 
+const _gifRequestTimeout = LichessClient.defaultRequestTimeout;
+const _gifMimeType = 'image/gif';
+
 class GameShareService {
   GameShareService(this._ref);
 
@@ -58,11 +61,9 @@ class GameShareService {
             '$kLichessCDNHost/export/fen.gif?fen=${Uri.encodeComponent(fen)}&color=${orientation.name}${lastMove != null ? '&lastMove=${lastMove.uci}' : ''}&theme=${boardTheme.gifApiName}&piece=${pieceTheme.name}',
           ),
         )
-        .timeout(const Duration(seconds: 1));
-    if (resp.statusCode != 200) {
-      throw Exception('Failed to get GIF');
-    }
-    return XFile.fromData(resp.bodyBytes, mimeType: 'image/gif');
+        .timeout(_gifRequestTimeout);
+    _checkGifResponse(resp);
+    return _gifFile(resp, name: 'position.gif');
   }
 
   /// Fetches the GIF animation of a game.
@@ -88,15 +89,13 @@ class GameShareService {
             ),
           ),
       _ref.read(gameRepositoryProvider).getGame(id),
-    ]).timeout(const Duration(seconds: 1));
+    ]).timeout(_gifRequestTimeout);
 
     final gifResp = resp[0] as Response;
     final game = resp[1] as ExportedGame;
 
-    if (gifResp.statusCode != 200) {
-      throw Exception('Failed to get GIF');
-    }
-    return (XFile.fromData(gifResp.bodyBytes, mimeType: 'image/gif'), game);
+    _checkGifResponse(gifResp);
+    return (_gifFile(gifResp, name: '$id.gif'), game);
   }
 
   /// Fetches the GIF animation of a study chapter.
@@ -115,10 +114,23 @@ class GameShareService {
             'piece': pieceTheme.name,
           }),
         )
-        .timeout(const Duration(seconds: 1));
-    if (resp.statusCode != 200) {
-      throw Exception('Failed to get GIF');
-    }
-    return XFile.fromData(resp.bodyBytes, mimeType: 'image/gif');
+        .timeout(_gifRequestTimeout);
+    _checkGifResponse(resp);
+    return _gifFile(resp, name: '$chapterId.gif');
   }
+}
+
+void _checkGifResponse(Response resp) {
+  if (resp.statusCode == 200) return;
+  final url = resp.request?.url;
+  throw Exception('Failed to get GIF: HTTP ${resp.statusCode}${url != null ? ' from $url' : ''}');
+}
+
+XFile _gifFile(Response resp, {required String name}) {
+  return XFile.fromData(
+    resp.bodyBytes,
+    mimeType: _gifMimeType,
+    name: name,
+    length: resp.bodyBytes.length,
+  );
 }
